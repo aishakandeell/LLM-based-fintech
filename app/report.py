@@ -1,37 +1,33 @@
 import os
-import openai
+#from openai import OpenAI
+import cohere
+import os
 import pandas as pd
 from docx import Document
 from datetime import datetime
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Make sure to set this in your environment
+COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "fhL35SWmjImqMN8hJo7pZYYMpxGYr7uKWu4CltM7"
+co = cohere.Client(COHERE_API_KEY)
 
 def get_ai_recommendation(financial_summary: str) -> str:
-    prompt = f"""
-    A company has shared its financial KPIs below. Based on this data, give a brief strategic recommendation to improve profitability and financial stability.
-
-    KPIs:
-    {financial_summary}
-
-    Recommendation:
-    """
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=150,
-            temperature=0.7
+        response = co.chat(
+            model="command-nightly",  # Works with .chat()
+            message=f"A company has reported the following KPIs: {financial_summary}. Based on this data, give a brief strategic recommendation to improve financial performance.",
+            temperature=0.7,
+            max_tokens=300
         )
-        return response.choices[0].message.content.strip()
+        return response.text.strip()
     except Exception as e:
-        return f"[AI Error: {e}]"
+        return f"[Cohere Chat API Error: {e}]"
+
 
 def generate_report(df: pd.DataFrame, selected_options: list, custom_filename: str = None) -> str:
     doc = Document()
-    doc.add_heading("📄 Fintech Strategic Report", level=1)
+    doc.add_heading(" Fintech Strategic Report", level=1)
 
     if "kpi_summary" in selected_options:
-        doc.add_heading("📊 KPI Summary", level=2)
+        doc.add_heading(" KPI Summary", level=2)
         try:
             revenue = df.loc[0, "Revenue"]
             cogs = df.loc[0, "COGS"]
@@ -47,7 +43,7 @@ def generate_report(df: pd.DataFrame, selected_options: list, custom_filename: s
             doc.add_paragraph(f"[Error extracting KPI Summary: {e}]")
 
     if "liquidity" in selected_options:
-        doc.add_heading("💧 Liquidity & Solvency Metrics", level=2)
+        doc.add_heading(" Liquidity & Solvency Metrics", level=2)
         try:
             cash = df.loc[0, "Cash"] if "Cash" in df.columns else "None"
             current_ratio = df.loc[0, "Current Ratio"] if "Current Ratio" in df.columns else "None"
@@ -59,7 +55,7 @@ def generate_report(df: pd.DataFrame, selected_options: list, custom_filename: s
             doc.add_paragraph(f"[Error extracting Liquidity Metrics: {e}]")
 
     if "profitability" in selected_options:
-        doc.add_heading("💹 Profitability Metrics", level=2)
+        doc.add_heading(" Profitability Metrics", level=2)
         try:
             gross_margin = df.loc[0, "Gross Margin"] if "Gross Margin" in df.columns else "N/A"
             ebitda_margin = df.loc[0, "EBITDA Margin"] if "EBITDA Margin" in df.columns else "N/A"

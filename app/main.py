@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, Request
+from fastapi import FastAPI, UploadFile, File, Form, Request, Path
 from fastapi.responses import HTMLResponse, FileResponse
 from app.kpi import extract_kpis
 from app.report import generate_report
@@ -44,7 +44,12 @@ def welcome():
             <h1> Welcome to the Fintech Analyzer!</h1>
             <p>Select what insights you want to generate from your financial files.</p>
             <a href="/upload-info" class="btn">Upload Financial File</a>
-            <a href="/docs" class="btn">API Explorer (Swagger)</a>
+            
+            <div style="position: fixed; bottom: 10px; width: 100%; text-align: center;">
+                <a href="/docs" style="font-size:12px; color:#aaa; text-decoration:underline;">Developer API Docs</a>
+            </div>
+
+
             <a href="/about" class="btn">About This Tool</a>
         </body>
     </html>
@@ -85,6 +90,12 @@ def upload_page():
                 .checkbox {
                     margin: 5px 0;
                 }
+                input[type="text"] {
+                    width: 100%;
+                    padding: 8px;
+                    border-radius: 5px;
+                    margin-top: 10px;
+                }
             </style>
         </head>
         <body>
@@ -102,6 +113,10 @@ def upload_page():
                     <div class="checkbox"><input type="checkbox" name="options" value="forensic"> Forensic Review (Red Flags)</div>
                     <div class="checkbox"><input type="checkbox" name="options" value="restructuring"> Restructuring Plan Suggestion</div>
                     <div class="checkbox"><input type="checkbox" name="options" value="charts"> Include Visual KPI Summary</div>
+                    
+                    <label for="filename">Custom Report Filename:</label><br>
+                    <input type="text" name="filename" placeholder="e.g., Report"><br><br>
+                    
                     <input type="submit" value="Upload and Analyze">
                 </form>
             </div>
@@ -109,14 +124,30 @@ def upload_page():
     </html>
     """
 
+
 @app.post("/upload/", response_class=HTMLResponse)
-async def upload_file(request: Request, file: UploadFile = File(...), options: list[str] = Form(...)):
+async def upload_file(
+    request: Request,
+    file: UploadFile = File(...),
+    options: list[str] = Form(...),
+    filename: str = Form(None)
+):
+
     contents = await file.read()
     try:
         kpis = extract_kpis(contents, file.filename, options)
-        report_path = generate_report(kpis, options)
+
+        # Convert to DataFrame
+        import pandas as pd
+        df = pd.DataFrame([kpis])
+
+        # Generate report with timestamped name
+        report_path = generate_report(df, options, custom_filename=filename if filename else None)
+
+        from pathlib import Path
+        filename = Path(report_path).name
+
         selected = "".join(f"<li>{opt.replace('_', ' ').title()}</li>" for opt in options)
-        
         return f"""
         <html>
             <head>
@@ -152,7 +183,7 @@ async def upload_file(request: Request, file: UploadFile = File(...), options: l
                     <h2> Report Successfully Generated!</h2>
                     <p><strong>Selected Features:</strong></p>
                     <ul style="text-align: left; display: inline-block;">{selected}</ul>
-                    <a class="btn" href="/download/report" download> Download Report</a>
+                    <a class="btn" href="/download/report/{filename}" download> Download Report</a>
                 </div>
             </body>
         </html>
@@ -160,11 +191,12 @@ async def upload_file(request: Request, file: UploadFile = File(...), options: l
     except Exception as e:
         return HTMLResponse(f"<h2 style='color:red;'>Error: {str(e)}</h2>", status_code=400)
 
-@app.get("/download/report")
-def download_report():
-    file_path = "data/financial_report.docx"
+
+@app.get("/download/report/{filename}")
+def download_report(filename: str = Path(...)):
+    file_path = f"data/{filename}"
     if os.path.exists(file_path):
-        return FileResponse(path=file_path, filename="financial_report.docx", media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        return FileResponse(path=file_path, filename=filename, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     return HTMLResponse("<h2 style='color:red;'>Report not found.</h2>", status_code=404)
 
 @app.get("/about", response_class=HTMLResponse)
