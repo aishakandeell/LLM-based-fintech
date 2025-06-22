@@ -42,14 +42,7 @@ def welcome():
         </head>
         <body>
             <h1> Welcome to the Fintech Analyzer!</h1>
-            <p>Select what insights you want to generate from your financial files.</p>
             <a href="/upload-info" class="btn">Upload Financial File</a>
-            
-            <div style="position: fixed; bottom: 10px; width: 100%; text-align: center;">
-                <a href="/docs" style="font-size:12px; color:#aaa; text-decoration:underline;">Developer API Docs</a>
-            </div>
-
-
             <a href="/about" class="btn">About This Tool</a>
         </body>
     </html>
@@ -106,15 +99,11 @@ def upload_page():
                     <div class="checkbox"><input type="checkbox" name="options" value="kpi_summary"> Include Financial KPIs</div>
                     <div class="checkbox"><input type="checkbox" name="options" value="liquidity"> Liquidity & Solvency Metrics</div>
                     <div class="checkbox"><input type="checkbox" name="options" value="profitability"> Profitability Metrics</div>
-                    <div class="checkbox"><input type="checkbox" name="options" value="macro"> Macroeconomic Adjustments</div>
                     <div class="checkbox"><input type="checkbox" name="options" value="ai_recommendations"> AI Strategic Recommendations</div>
-                    <div class="checkbox"><input type="checkbox" name="options" value="benchmarking"> Benchmarking vs. Industry</div>
-                    <div class="checkbox"><input type="checkbox" name="options" value="forecasting"> Forecasting (2025–2029)</div>
-                    <div class="checkbox"><input type="checkbox" name="options" value="forensic"> Forensic Review (Red Flags)</div>
-                    <div class="checkbox"><input type="checkbox" name="options" value="restructuring"> Restructuring Plan Suggestion</div>
-                    <div class="checkbox"><input type="checkbox" name="options" value="charts"> Include Visual KPI Summary</div>
+                    <div class="checkbox"><input type="checkbox" name="options" value="risk_restructure"> Risk Flags & Restructuring</div>
+
                     
-                    <label for="filename">Custom Report Filename:</label><br>
+                    <label for="filename">Filename:</label><br>
                     <input type="text" name="filename" placeholder="e.g., Report"><br><br>
                     
                     <input type="submit" value="Upload and Analyze">
@@ -206,19 +195,7 @@ def about_tool():
         <head><title>About the Fintech Analyzer</title></head>
         <body style="background-color:#111; color:#eee; font-family:Arial; padding:40px; text-align:center;">
             <h1 style="color:#00d9ff;">Fintech Analyzer Tool Features</h1>
-            <p>This page provides an overview of the core features included in the report generation process:</p>
-            <ul style="text-align:left; display:inline-block; font-size:16px;">
-                <li><strong>Include Financial KPIs:</strong> Generates a summary of key financial indicators such as Revenue, Gross Profit, EBITDA, and Net Income.</li>
-                <li><strong>Liquidity & Solvency Metrics:</strong> Provides insights into a company’s financial health using Cash, Current Ratio, and Debt Ratio.</li>
-                <li><strong>Profitability Metrics:</strong> Calculates and displays financial margins such as Gross Margin, EBITDA Margin, and Net Margin.</li>
-                <li><strong>Macroeconomic Adjustments:</strong> Adjusts key figures to account for inflation or exchange rate effects (optional extension).</li>
-                <li><strong>AI Strategic Recommendations:</strong> Uses OpenAI to generate tailored strategic advice based on provided KPIs.</li>
-                <li><strong>Benchmarking vs. Industry:</strong> Compares company performance against industry standards or competitors.</li>
-                <li><strong>Forecasting (2025–2029):</strong> Projects future performance based on historical trends and assumptions.</li>
-                <li><strong>Forensic Review (Red Flags):</strong> Flags abnormal or concerning financial indicators for review.</li>
-                <li><strong>Restructuring Plan Suggestion:</strong> Recommends corrective actions based on detected weaknesses or red flags.</li>
-                <li><strong>Include Visual KPI Summary:</strong> Adds charts and graphs to visualize trends in performance (under development).</li>
-            </ul>
+            
         </body>
     </html>
     """
