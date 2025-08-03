@@ -1,60 +1,46 @@
 import pandas as pd
-import io
+from io import BytesIO
 
-def extract_kpis(contents: bytes, filename: str, options: list[str]) -> dict:
-    if filename.endswith(".csv"):
-        df = pd.read_csv(io.BytesIO(contents))
-    elif filename.endswith(".xlsx"):
-        df = pd.read_excel(io.BytesIO(contents), engine="openpyxl")
-    else:
-        raise ValueError("Unsupported file format")
+def extract_kpis(file_bytes, filename, options):
+    excel_file = BytesIO(file_bytes)
+    xls = pd.ExcelFile(excel_file)
+    all_dfs = []
 
-    latest = df.iloc[-1]
-    result = {}
+    for sheet in xls.sheet_names:
+        df_raw = xls.parse(sheet, header=None)
+        df_raw = df_raw.dropna(how='all')
 
-    if "kpi_summary" in options or "kpi" in options:
-        result.update({
-            "Revenue": latest.get("Total Revenues"),
-            "COGS": latest.get("COGS"),
-            "Gross Profit": latest.get("Gross Profit"),
-            "EBITDA": latest.get("EBITDA"),
-            "Net Income": latest.get("Net Income (NI)")
-        })
+        # Find the row where 'Income Statement' appears
+        income_idx = None
+        for i, row in df_raw.iterrows():
+            if row.astype(str).str.contains("income statement", case=False).any():
+                income_idx = i
+                break
 
-    if "liquidity" in options:
-        result.update({
-            "Cash": latest.get("Cash"),
-            "Current Ratio": latest.get("Current Ratio"),
-            "Debt Ratio": latest.get("Debt Ratio")
-        })
+        if income_idx is None:
+            continue
 
-    if "profitability" in options:
-        result.update({
-            "Gross Margin": latest.get("Gross Margin"),
-            "Net Margin": latest.get("Net Margin"),
-            "EBITDA Margin": latest.get("EBITDA Margin")
-        })
+        # Extract from the row after 'Income Statement'
+        data_block = df_raw.iloc[income_idx + 1:].copy()
 
-    if "macro" in options:
-        result["Inflation Impact"] = "Adjusted using CPI index (placeholder)"
-        result["FX Rate"] = "1 USD = 30.5 EGP (example)"
+        # Stop at first fully empty row
+        empty_rows = data_block.apply(lambda r: r.isna().all(), axis=1)
+        if empty_rows.any():
+            data_block = data_block.loc[:empty_rows.idxmax() - 1]
 
-    if "ai_recommendations" in options:
-        result["AI Recommendation"] = latest.get("Simulated Recommendation", "Restructure")
+        # Use first row as header
+        headers = ["KPI"] + list(data_block.iloc[0][1:].astype(str))
+        df_cleaned = data_block[1:]
+        df_cleaned.columns = headers
+        df_cleaned = df_cleaned.reset_index(drop=True)
 
-    if "benchmarking" in options:
-        result["Benchmark Comparison"] = "Sector average Net Margin is 8%. Company is below."
+        all_dfs.append(df_cleaned)
 
-    if "forecasting" in options:
-        result["Forecast (Net Income 2026)"] = 18000  # Placeholder, could use model later
+    if not all_dfs:
+        raise ValueError("No Income Statement block found in the uploaded file.")
 
-    if "forensic" in options:
-        result["Accounting Red Flags"] = "Sharp increase in liabilities with no asset growth."
+    df_combined = pd.concat(all_dfs, ignore_index=True)
+    df_combined = df_combined.loc[:, ~df_combined.columns.duplicated()]
+    df_combined = df_combined.fillna("")
 
-    if "restructuring" in options:
-        result["Restructuring Plan"] = "Reduce OPEX by 10% over 2 years. Divest underperforming unit."
-
-    if "charts" in options:
-        result["Chart Ready"] = True  # Used as a flag in report generation
-
-    return result
+    return df_combined
