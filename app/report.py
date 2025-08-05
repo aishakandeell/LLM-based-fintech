@@ -379,5 +379,3 @@ def generate_report(df: pd.DataFrame, company_name: str = None, industry_name: s
     )
 
     return output_path, overview_path
-
-
