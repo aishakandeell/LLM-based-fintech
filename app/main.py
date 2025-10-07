@@ -1,9 +1,12 @@
 
 from fastapi import FastAPI, UploadFile, File, Form, Request, Path
 from fastapi.responses import HTMLResponse, FileResponse
-from app.kpi import extract_kpis
-from app.report import generate_report
+#from app.kpi import extract_kpis, extract_balance_sheet_kpis 
+from app.kpi import extract_balance_sheet_kpis
+#from app.report import generate_report
 import os
+import time 
+from mimetypes import guess_type
 
 app = FastAPI()
 
@@ -155,8 +158,14 @@ async def upload_file(
 ):
     contents = await file.read()
     try:
-        df = extract_kpis(contents, file.filename, options)
-        report_path, overview_path = generate_report(df,company_name=company_name,industry_name=industry_name,custom_filename=filename,overview_filename=overview_filename)
+        # df = extract_kpis(contents, file.filename, options)
+        # report_path, overview_path = generate_report(df,company_name=company_name,industry_name=industry_name,custom_filename=filename,overview_filename=overview_filename)
+
+        os.makedirs("data", exist_ok=True)
+        kpi_df = extract_balance_sheet_kpis(contents, years_wanted=(2020, 2021, 2022, 2023, 2024))
+        kpi_excel_name = f"kpis_balance_{int(time.time())}.xlsx"
+        kpi_excel_path = os.path.join("data", kpi_excel_name)
+        kpi_df.to_excel(kpi_excel_path, index=False) 
 
         # return f"""
         # <html><body style='background:#111; color:white; padding:40px;'>
@@ -197,8 +206,10 @@ async def upload_file(
                 <div class="card">
                     <h2>Report Generated</h2>
                     <p>Your files are ready to download.</p>
-                    <a class="btn" href='/download/report/{os.path.basename(report_path)}'>Download Report</a>
-                    <a class="btn" href='/download/report/{os.path.basename(overview_path)}'>Download Summary Overview</a>
+                   
+                    
+                    <a class="btn" href='/download/report/{os.path.basename(kpi_excel_path)}'>Download balance sheet KPI Excel</a>
+
                 </div>
             </body>
             </html>
@@ -211,5 +222,10 @@ async def upload_file(
 def download_report(filename: str = Path(...)):
     path = f"data/{filename}"
     if os.path.exists(path):
-        return FileResponse(path=path, filename=filename, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        mime, _ = guess_type(path)  # guesses by extension (.docx, .xlsx, etc.)
+        return FileResponse(
+            path=path,
+            filename=filename,
+            media_type=mime or 'application/octet-stream'
+        )
     return HTMLResponse("<h2 style='color:red;'>Report not found.</h2>", status_code=404)
